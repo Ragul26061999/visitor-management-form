@@ -61,6 +61,7 @@ function VisitorFormContent() {
         toMeet: form.toMeet?.trim() || null,
         vehicleNumber: form.vehicleNumber?.trim() || null,
         duration: form.duration?.trim() || null,
+        schoolId: "/school/cihir4BLjVvYNTVBdmqF",
         status: "pending",
         createdAt: serverTimestamp()
       });
