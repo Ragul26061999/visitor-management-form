@@ -7,23 +7,10 @@ export default function Home() {
   const [qrUrl, setQrUrl] = useState("");
 
   useEffect(() => {
-    // Generate the URL for the QR scan page with sample data
+    // Generate the URL for the visitor form
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const scanUrl = new URL(`${baseUrl}/visitor/scan`);
-    
-    // Add sample data as URL parameters
-    scanUrl.searchParams.append("checkInTime", "2025-10-25T13:22:28+05:30");
-    scanUrl.searchParams.append("checkOutTime", "2025-10-25T13:56:12+05:30");
-    scanUrl.searchParams.append("email", "ragul26061999@gmail.com");
-    scanUrl.searchParams.append("hostDepartment", "ftufktfkyuuy");
-    scanUrl.searchParams.append("hostPerson", "vishal");
-    scanUrl.searchParams.append("mobileNumber", "8939243996");
-    scanUrl.searchParams.append("status", "checked-out");
-    scanUrl.searchParams.append("visitPurpose", "parent");
-    scanUrl.searchParams.append("visitorName", "ragul");
-    scanUrl.searchParams.append("visitorType", "current");
-    
-    setQrUrl(scanUrl.toString());
+    const formUrl = `${baseUrl}/visitor/form`;
+    setQrUrl(formUrl);
   }, []);
 
   return (
@@ -63,27 +50,18 @@ export default function Home() {
                 </code>
               </div>
               
-              <div className="text-center space-y-3">
+              <div className="text-center">
                 <p className="text-sm text-[#475569]">
-                  When visitors scan this QR code, they will be redirected to the visitor registration form with pre-filled data.
+                  When visitors scan this QR code, they will be redirected to the visitor registration form.
                 </p>
-                
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <a
-                    href="/visitor/form"
-                    className="inline-flex items-center px-5 py-2.5 rounded-xl text-white shadow-sm transition-colors bg-[#5B9EEF] hover:bg-[#4B8FDF] justify-center"
-                  >
-                    Go to Form Directly
-                  </a>
-                  
-                  <a
-                    href="/test-qr"
-                    className="inline-flex items-center px-5 py-2.5 rounded-xl text-[#0F172A] shadow-sm transition-colors bg-[#F1F5F9] hover:bg-[#E2E8F0] justify-center"
-                  >
-                    View Test QR
-                  </a>
-                </div>
               </div>
+              
+              <a
+                href="/visitor/form"
+                className="inline-flex items-center px-5 py-2.5 rounded-xl text-white shadow-sm transition-colors bg-[#5B9EEF] hover:bg-[#4B8FDF]"
+              >
+                Go to Form Directly
+              </a>
             </div>
           )}
         </div>

@@ -32,36 +32,12 @@ function VisitorFormContent() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
-  const [isExistingVisitor, setIsExistingVisitor] = useState(false);
 
   useEffect(() => {
     if (idFromUrl) {
       setCreatedId(idFromUrl);
-      // Check if this is an existing visitor record
-      setIsExistingVisitor(true);
     }
   }, [idFromUrl]);
-
-  // Pre-fill form with data from QR code if available
-  useEffect(() => {
-    const prefillForm = async () => {
-      // Check if we have QR scan data in the URL
-      const checkInTime = searchParams.get("checkInTime");
-      if (checkInTime) {
-        // This is a QR code scan, pre-fill the form
-        setForm({
-          fullName: searchParams.get("visitorName") || "",
-          phone: searchParams.get("mobileNumber") || "",
-          email: searchParams.get("email") || "",
-          purpose: searchParams.get("visitPurpose") || "",
-          toMeet: searchParams.get("hostPerson") || "",
-          department: searchParams.get("hostDepartment") || ""
-        });
-      }
-    };
-    
-    prefillForm();
-  }, [searchParams]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -84,43 +60,25 @@ function VisitorFormContent() {
         throw new Error("School ID is missing. Please ensure you are logged in properly.");
       }
 
-      // If this is an existing visitor (from QR scan), update the record
-      if (isExistingVisitor && createdId) {
-        // Update the existing document with form data
-        await updateDoc(doc(db, "visitors", createdId), {
-          visitorName: form.fullName.trim(),
-          mobileNumber: form.phone.trim(),
-          email: form.email?.trim() || null,
-          visitPurpose: form.purpose.trim(),
-          hostPerson: form.toMeet.trim(),
-          hostDepartment: form.department?.trim() || null,
-          visitorType: "current",
-          status: "checked-in",
-          checkInTime: serverTimestamp(),
-          createdAt: serverTimestamp(),
-          schoolId: doc(db, "school", schoolId) // Save as reference instead of string
-        });
-      } else {
-        // Create the document first without visitorId
-        const docRef = await addDoc(collection(db, "visitors"), {
-          visitorName: form.fullName.trim(),
-          mobileNumber: form.phone.trim(),
-          email: form.email?.trim() || null,
-          visitPurpose: form.purpose.trim(),
-          hostPerson: form.toMeet.trim(),
-          hostDepartment: form.department?.trim() || null,
-          visitorType: "current",
-          status: "checked-in",
-          checkInTime: serverTimestamp(),
-          createdAt: serverTimestamp(),
-          schoolId: doc(db, "school", schoolId) // Save as reference instead of string
-        });
-        
-        // Update the document to include visitorId (same as document ID)
-        await updateDoc(doc(db, "visitors", docRef.id), { visitorId: docRef.id });
-        
-        setCreatedId(docRef.id);
-      }
+      // Create the document first without visitorId
+      const docRef = await addDoc(collection(db, "visitors"), {
+        visitorName: form.fullName.trim(),
+        mobileNumber: form.phone.trim(),
+        email: form.email?.trim() || null,
+        visitPurpose: form.purpose.trim(),
+        hostPerson: form.toMeet.trim(),
+        hostDepartment: form.department?.trim() || null,
+        visitorType: "current",
+        status: "checked-in",
+        checkInTime: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        schoolId: doc(db, "school", schoolId) // Save as reference instead of string
+      });
+      
+      // Update the document to include visitorId (same as document ID)
+      await updateDoc(doc(db, "visitors", docRef.id), { visitorId: docRef.id });
+      
+      setCreatedId(docRef.id);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to submit visitor form");
     } finally {
@@ -131,7 +89,6 @@ function VisitorFormContent() {
   const resetForm = () => {
     setForm({ fullName: "", phone: "", email: "", purpose: "", toMeet: "", department: "" });
     setCreatedId(null);
-    setIsExistingVisitor(false);
     setError(null);
   };
 
@@ -280,7 +237,7 @@ function VisitorFormContent() {
               transition: "background 150ms ease"
             }}
           >
-            {submitting ? "Submitting..." : (isExistingVisitor ? "Update visitor entry" : "Create visitor entry")}
+            {submitting ? "Submitting..." : "Create visitor entry"}
           </button>
         </form>
       )}
