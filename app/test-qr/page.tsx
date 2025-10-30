@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import Link from "next/link";
 
-export default function Home() {
+export default function TestQRPage() {
   const [qrUrl, setQrUrl] = useState("");
 
   useEffect(() => {
@@ -11,7 +12,7 @@ export default function Home() {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
     const scanUrl = new URL(`${baseUrl}/visitor/scan`);
     
-    // Add sample data as URL parameters
+    // Add the exact sample data from the requirements
     scanUrl.searchParams.append("checkInTime", "2025-10-25T13:22:28+05:30");
     scanUrl.searchParams.append("checkOutTime", "2025-10-25T13:56:12+05:30");
     scanUrl.searchParams.append("email", "ragul26061999@gmail.com");
@@ -30,21 +31,9 @@ export default function Home() {
     <div className="min-h-screen w-full bg-[linear-gradient(135deg,#f7f7ff_0%,#f2fbfa_40%,#fff7f5_100%)] flex items-center justify-center p-4">
       <div className="max-w-md w-full rounded-2xl shadow-[0_10px_30px_rgba(16,24,40,0.08)] border border-[#E9ECEF] bg-white/90 backdrop-blur p-8">
         <div className="text-center">
-          {/* CLASSA Logo */}
-          <div className="mb-6">
-            <img 
-              src="/image/classa logo.png" 
-              alt="CLASSA Logo" 
-              className="h-16 w-auto mx-auto"
-            />
-          </div>
-          
-          <h1 className="text-3xl font-semibold tracking-tight text-[#0F172A] mb-2">
-            Visitor Management
+          <h1 className="text-3xl font-semibold tracking-tight text-[#0F172A] mb-6">
+            Test QR Code
           </h1>
-          <p className="text-[#475569] mb-8">
-            Scan this QR code to access the visitor registration form
-          </p>
           
           {qrUrl && (
             <div className="flex flex-col items-center space-y-6">
@@ -57,33 +46,18 @@ export default function Home() {
               </div>
               
               <div className="text-center">
-                <p className="text-sm text-[#64748B] mb-2">QR Code contains:</p>
-                <code className="bg-[#F1F5F9] px-3 py-2 rounded-md text-xs break-all text-[#0F172A]">
-                  {qrUrl}
-                </code>
+                <p className="text-sm text-[#64748B] mb-2">Scan this QR code to test the functionality</p>
+                <p className="text-sm text-[#475569]">
+                  This QR code contains the exact data specified in your requirements.
+                </p>
               </div>
               
-              <div className="text-center space-y-3">
-                <p className="text-sm text-[#475569]">
-                  When visitors scan this QR code, they will be redirected to the visitor registration form with pre-filled data.
-                </p>
-                
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <a
-                    href="/visitor/form"
-                    className="inline-flex items-center px-5 py-2.5 rounded-xl text-white shadow-sm transition-colors bg-[#5B9EEF] hover:bg-[#4B8FDF] justify-center"
-                  >
-                    Go to Form Directly
-                  </a>
-                  
-                  <a
-                    href="/test-qr"
-                    className="inline-flex items-center px-5 py-2.5 rounded-xl text-[#0F172A] shadow-sm transition-colors bg-[#F1F5F9] hover:bg-[#E2E8F0] justify-center"
-                  >
-                    View Test QR
-                  </a>
-                </div>
-              </div>
+              <Link
+                href="/"
+                className="inline-flex items-center px-5 py-2.5 rounded-xl text-white shadow-sm transition-colors bg-[#5B9EEF] hover:bg-[#4B8FDF]"
+              >
+                Back to Home
+              </Link>
             </div>
           )}
         </div>

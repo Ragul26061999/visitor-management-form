@@ -2,41 +2,66 @@
 
 import { useEffect, useMemo, useState, Suspense, type ChangeEvent, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import { QRCodeSVG } from "qrcode.react";
+import { useAuth } from "../../contexts/AuthContext";
 
 type VisitorFormData = {
   fullName: string;
   phone: string;
   email?: string;
   purpose: string;
-  toMeet?: string;
-  vehicleNumber?: string;
-  duration?: string;
+  toMeet: string; // Made required as per new format
+  department?: string; // Added department field
+  // Removed vehicleNumber and duration as they're not in the new format
 };
 
 function VisitorFormContent() {
   const searchParams = useSearchParams();
   const idFromUrl = useMemo(() => searchParams.get("id"), [searchParams]);
+  const { schoolId } = useAuth(); // Get schoolId from AuthContext
   const [form, setForm] = useState<VisitorFormData>({
     fullName: "",
     phone: "",
     email: "",
     purpose: "",
-    toMeet: "",
-    vehicleNumber: "",
-    duration: ""
+    toMeet: "", // hostPerson
+    department: "" // hostDepartment
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const [isExistingVisitor, setIsExistingVisitor] = useState(false);
 
   useEffect(() => {
     if (idFromUrl) {
       setCreatedId(idFromUrl);
+      // Check if this is an existing visitor record
+      setIsExistingVisitor(true);
     }
   }, [idFromUrl]);
+
+  // Pre-fill form with data from QR code if available
+  useEffect(() => {
+    const prefillForm = async () => {
+      // Check if we have QR scan data in the URL
+      const checkInTime = searchParams.get("checkInTime");
+      if (checkInTime) {
+        // This is a QR code scan, pre-fill the form
+        setForm({
+          fullName: searchParams.get("visitorName") || "",
+          phone: searchParams.get("mobileNumber") || "",
+          email: searchParams.get("email") || "",
+          purpose: searchParams.get("visitPurpose") || "",
+          toMeet: searchParams.get("hostPerson") || "",
+          department: searchParams.get("hostDepartment") || ""
+        });
+      }
+    };
+    
+    prefillForm();
+  }, [searchParams]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -52,20 +77,50 @@ function VisitorFormContent() {
       if (!form.fullName.trim()) throw new Error("Full name is required");
       if (!form.phone.trim()) throw new Error("Phone is required");
       if (!form.purpose.trim()) throw new Error("Purpose is required");
+      if (!form.toMeet.trim()) throw new Error("Host person is required"); // Changed validation message
 
-      const docRef = await addDoc(collection(db, "visitors"), {
-        fullName: form.fullName.trim(),
-        phone: form.phone.trim(),
-        email: form.email?.trim() || null,
-        purpose: form.purpose.trim(),
-        toMeet: form.toMeet?.trim() || null,
-        vehicleNumber: form.vehicleNumber?.trim() || null,
-        duration: form.duration?.trim() || null,
-        schoolId: "/school/cihir4BLjVvYNTVBdmqF",
-        status: "pending",
-        createdAt: serverTimestamp()
-      });
-      setCreatedId(docRef.id);
+      // Validate that we have a school ID
+      if (!schoolId) {
+        throw new Error("School ID is missing. Please ensure you are logged in properly.");
+      }
+
+      // If this is an existing visitor (from QR scan), update the record
+      if (isExistingVisitor && createdId) {
+        // Update the existing document with form data
+        await updateDoc(doc(db, "visitors", createdId), {
+          visitorName: form.fullName.trim(),
+          mobileNumber: form.phone.trim(),
+          email: form.email?.trim() || null,
+          visitPurpose: form.purpose.trim(),
+          hostPerson: form.toMeet.trim(),
+          hostDepartment: form.department?.trim() || null,
+          visitorType: "current",
+          status: "checked-in",
+          checkInTime: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          schoolId: doc(db, "school", schoolId) // Save as reference instead of string
+        });
+      } else {
+        // Create the document first without visitorId
+        const docRef = await addDoc(collection(db, "visitors"), {
+          visitorName: form.fullName.trim(),
+          mobileNumber: form.phone.trim(),
+          email: form.email?.trim() || null,
+          visitPurpose: form.purpose.trim(),
+          hostPerson: form.toMeet.trim(),
+          hostDepartment: form.department?.trim() || null,
+          visitorType: "current",
+          status: "checked-in",
+          checkInTime: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          schoolId: doc(db, "school", schoolId) // Save as reference instead of string
+        });
+        
+        // Update the document to include visitorId (same as document ID)
+        await updateDoc(doc(db, "visitors", docRef.id), { visitorId: docRef.id });
+        
+        setCreatedId(docRef.id);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to submit visitor form");
     } finally {
@@ -74,8 +129,9 @@ function VisitorFormContent() {
   };
 
   const resetForm = () => {
-    setForm({ fullName: "", phone: "", email: "", purpose: "", toMeet: "", vehicleNumber: "", duration: "" });
+    setForm({ fullName: "", phone: "", email: "", purpose: "", toMeet: "", department: "" });
     setCreatedId(null);
+    setIsExistingVisitor(false);
     setError(null);
   };
 
@@ -170,7 +226,7 @@ function VisitorFormContent() {
           </label>
 
           <label style={{ display: "grid", gap: 6 }}>
-            <span>Purpose *</span>
+            <span>Visit Purpose *</span>
             <input
               name="purpose"
               value={form.purpose}
@@ -182,43 +238,26 @@ function VisitorFormContent() {
           </label>
 
           <label style={{ display: "grid", gap: 6 }}>
-            <span>To meet (optional)</span>
+            <span>Host Person *</span>
             <input
               name="toMeet"
               value={form.toMeet}
               onChange={handleChange}
               placeholder="Person to meet"
+              required
               style={{ padding: 12, border: "1px solid #E2E8F0", borderRadius: 12, background: "#F8FAFC" }}
             />
           </label>
 
           <label style={{ display: "grid", gap: 6 }}>
-            <span>Vehicle number (optional)</span>
+            <span>Host Department</span>
             <input
-              name="vehicleNumber"
-              value={form.vehicleNumber}
+              name="department"
+              value={form.department}
               onChange={handleChange}
-              placeholder="TN 00 AB 1234"
+              placeholder="Department of host"
               style={{ padding: 12, border: "1px solid #E2E8F0", borderRadius: 12, background: "#F8FAFC" }}
             />
-          </label>
-
-          <label style={{ display: "grid", gap: 6 }}>
-            <span>Expected duration (optional)</span>
-            <select
-              name="duration"
-              value={form.duration || ""}
-              onChange={handleChange}
-              style={{ padding: 12, border: "1px solid #E2E8F0", borderRadius: 12, background: "#F8FAFC" }}
-            >
-              <option value="">Select duration</option>
-              <option value="15min">15 minutes</option>
-              <option value="30min">30 minutes</option>
-              <option value="1hour">1 hour</option>
-              <option value="2hours">2 hours</option>
-              <option value="halfday">Half day</option>
-              <option value="fullday">Full day</option>
-            </select>
           </label>
 
           {error && (
@@ -241,7 +280,7 @@ function VisitorFormContent() {
               transition: "background 150ms ease"
             }}
           >
-            {submitting ? "Submitting..." : "Create visitor entry"}
+            {submitting ? "Submitting..." : (isExistingVisitor ? "Update visitor entry" : "Create visitor entry")}
           </button>
         </form>
       )}
@@ -275,5 +314,3 @@ export default function VisitorFormPage() {
     </Suspense>
   );
 }
-
-
